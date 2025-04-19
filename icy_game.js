@@ -43,7 +43,8 @@ platforms.push({
     timeLeftStanding: null,    
     playerWasOn: false,
     falling: false,
-    shouldFall: false 
+    shouldFall: false,
+    enemy: null
 });
 
 let lastY = canvas.height - 50;
@@ -51,6 +52,19 @@ let lastY = canvas.height - 50;
 function createPlatform(y) {
     let width = currentIndex % 10 === 0 ? canvas.width : 100;
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
+
+    let enemy = null;
+    if (Math.random() < 0.05) { // 5% סיכוי
+        const enemyType = Math.random() < 0.5 ? 'Type1' : 'Type2';
+        enemy = {
+            type: enemyType,
+            width: 20,
+            height: 20,
+            x: x + (enemyType === 'Type1' ? (width / 2 - 10) : 0),
+            y: y - 20,
+            direction: (enemyType === 'Type2' ? 1 : 0)// only for Tyoe2
+        };
+    }
 
     return {
         x: x,
@@ -63,7 +77,8 @@ function createPlatform(y) {
         timeLeftStanding: null,
         playerWasOn: false,
         falling: false,
-        shouldFall: false
+        shouldFall: false,
+        enemy: enemy
     };
 }
 
@@ -125,6 +140,9 @@ function updateGame() {
         player.y += scroll;
         platforms.forEach(platform => {
             platform.y += scroll;
+            if (platform.enemy) {
+                platform.enemy.y += scroll;
+            }
         });
         maybeAddPlatforms(); 
     }
@@ -202,6 +220,21 @@ function updateGame() {
         }
     });
 
+    // 🟡 Update moving enemies (Type2)
+    platforms.forEach(platform => {
+        const enemy = platform.enemy;
+        if (enemy && enemy.type === 'Type2') {
+            // movement enemy 
+            enemy.x += 1.5 * enemy.direction;
+
+            // direction
+            if (enemy.x <= platform.x || enemy.x + enemy.width >= platform.x + platform.width) {
+                enemy.direction *= -1;
+            }
+        }
+    });
+
+
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -230,6 +263,15 @@ function updateGame() {
     ctx.fillStyle = 'black';
     ctx.font = '20px "Mystery Quest", cursive';
     ctx.fillText('Score: ' + score.toString().padStart(Math.max(4, score.toString().length), '0'), 10, 30);
+    
+    //  Draw enemies
+    platforms.forEach(platform => {
+    const enemy = platform.enemy;
+        if (enemy && platform.visible) {
+            ctx.fillStyle = enemy.type === 'Type1' ? 'purple' : 'orange';
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+    });
 
     requestAnimationFrame(updateGame);
     }
