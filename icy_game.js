@@ -217,8 +217,12 @@ function updateGame() {
     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
     if (platform.index % 10 === 0) {
         ctx.fillStyle = 'black';
-        ctx.font = '12px Arial';
-        ctx.fillText(platform.index.toString(), platform.x + 5, platform.y - 5);
+        ctx.font = '16px "Mystery Quest", cursive';
+        const text = platform.index.toString();
+        const textWidth = ctx.measureText(text).width;
+        const centerX = platform.x + (platform.width / 2) - (textWidth / 2);
+        const belowY = platform.y + platform.height + 14; 
+        ctx.fillText(text, centerX, belowY);
     }
     });
 
