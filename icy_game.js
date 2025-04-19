@@ -1,73 +1,108 @@
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-    // Game settings
-    const gravity = 0.5;
-    const friction = 0.8;
-    const baseJump = -10;
-    const platformSpacing = 50; 
+// Game settings
+const gravity = 0.5;
+const friction = 0.8;
+const baseJump = -10;
+const platformSpacing = 50; 
+const platformTimeout = 4000; //pltform gone after 4 sec
+const platformDecayDelay = 5000;
 
-    // Score
-    let score = 0;
-    let highestPlatformReached = 0;
+// Score
+let score = 0;
+let highestPlatformReached = 0;
 
-    // Player
-    let player = {
-        x: canvas.width / 2,
-        y: canvas.height - 150,
-        width: 20,
-        height: 20,
-        speed: 5,
-        velX: 0,
-        velY: 0,
-        jumping: false
-    };
+// Player
+let player = {
+    x: canvas.width / 2,
+    y: canvas.height - 150,
+    width: 20,
+    height: 20,
+    speed: 5,
+    velX: 0,
+    velY: 0,
+    jumping: false,
+    onPlatformIndex: null,    
+    standingSince: null  
+};
 
-    // Platforms
-    let platforms = [];
-    let currentIndex = 0;
+// Platforms
+let platforms = [];
+let currentIndex = 0;
 
-    // First platform: index 0, full width at bottom
-    platforms.push({
-        x: 0,
-        y: canvas.height - 50,
-        width: canvas.width,
+// First platform: index 0, full width at bottom
+platforms.push({
+    x: 0,
+    y: canvas.height - 50,
+    width: canvas.width,
+    height: 10,
+    index: currentIndex++,
+    visible: true, //platform gone or not
+    timeStartedStanding: null,
+    timeLeftStanding: null,    
+    playerWasOn: false,
+    falling: false,
+    shouldFall: false 
+});
+
+let lastY = canvas.height - 50;
+
+function createPlatform(y) {
+    let width = currentIndex % 10 === 0 ? canvas.width : 100;
+    let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
+
+    return {
+        x: x,
+        y: y,
+        width: width,
         height: 10,
-        index: currentIndex++
-    });
+        index: currentIndex++,
+        visible: true,
+        timeStartedStanding: null,
+        timeLeftStanding: null,
+        playerWasOn: false,
+        falling: false,
+        shouldFall: false
+    };
+}
 
-    let lastY = canvas.height - 50;
-    while (platforms.length < 10) {
-        let newY = lastY - (platformSpacing + Math.floor(Math.random() * 50));
-        lastY = newY;
+// First platform
+platforms.push(createPlatform(lastY));
 
-        let width = currentIndex % 10 === 0 ? canvas.width : 100;
-        let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
+// Add a few to start
+for (let i = 0; i < 9; i++) {
+    lastY -= platformSpacing + Math.floor(Math.random() * 50);
+    platforms.push(createPlatform(lastY));
+}
 
-        platforms.push({
-            x: x,
-            y: newY,
-            width: width,
-            height: 10,
-            index: currentIndex++
-        });
+
+// Key Listener
+let keys = [];
+window.addEventListener('keydown', function (e) {
+    keys[e.keyCode] = true;
+    if (e.keyCode == 32 && !player.jumping) {
+        player.jumping = true;
+        player.velY = baseJump - Math.abs(player.velX);
     }
+});
 
-    // Key Listener
-    let keys = [];
-    window.addEventListener('keydown', function (e) {
-        keys[e.keyCode] = true;
-        if (e.keyCode == 32 && !player.jumping) {
-            player.jumping = true;
-            player.velY = baseJump - Math.abs(player.velX);
-        }
-    });
+window.addEventListener('keyup', function (e) {
+    keys[e.keyCode] = false;
+});
 
-    window.addEventListener('keyup', function (e) {
-        keys[e.keyCode] = false;
-    });
 
-    function updateGame() {
+function maybeAddPlatforms() {
+    const minY = Math.min(...platforms.map(p => p.y));
+    while (lastY > minY - canvas.height) {
+        let newY = lastY - (platformSpacing + Math.floor(Math.random() * 50));
+        platforms.push(createPlatform(newY));
+        lastY = newY;
+    }
+}
+
+function updateGame() {
+    
     if (keys[39]) {
         if (player.velX < player.speed) {
             player.velX++;
@@ -81,7 +116,6 @@
 
     player.velX *= friction;
     player.velY += gravity;
-
     player.x += player.velX;
     player.y += player.velY;
 
@@ -91,22 +125,9 @@
         player.y += scroll;
         platforms.forEach(platform => {
             platform.y += scroll;
-            if (platform.y > canvas.height) {
-                let newIndex = Math.max(...platforms.map(p => p.index)) + 1;
-                let newY = Math.min(...platforms.map(p => p.y)) - (platformSpacing + Math.floor(Math.random() * 50));
-
-                let width = newIndex % 10 === 0 ? canvas.width : 100;
-                let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
-
-                platform.index = newIndex;
-                platform.y = newY;
-                platform.x = x;
-                platform.width = width;
-            }
         });
+        maybeAddPlatforms(); 
     }
-
-    // Collision with canvas edges
     if (player.x >= canvas.width - player.width) {
         player.x = canvas.width - player.width;
     } else if (player.x <= 0) {
@@ -119,31 +140,68 @@
         player.velY = 0;
     }
 
-    // Platform collision
+    let standingOn = null;
+
     platforms.forEach(platform => {
-    if (
+        if (!platform.visible) return;
+
+        const isOnPlatform =
         player.x < platform.x + platform.width &&
         player.x + player.width > platform.x &&
         player.y + player.height > platform.y &&
         player.y + player.height < platform.y + platform.height &&
-        player.velY >= 0
-    ) {
+        player.velY >= 0;
+
+        if (isOnPlatform) {
         player.jumping = false;
         player.velY = 0;
         player.y = platform.y - player.height;
+        standingOn = platform.index;
+        platform.playerWasOn = true;
 
         if (platform.index > highestPlatformReached) {
             const jumpDistance = platform.index - highestPlatformReached;
             if (jumpDistance >= 1) {
-                score += jumpDistance * 10;
-                if (jumpDistance > 1) {
-                    score += 50;
-                }
+            score += jumpDistance * 10;
+            if (jumpDistance > 2) {
+                score += 50;
+            }
             }
             highestPlatformReached = platform.index;
         }
-    }
+
+        if (platform.timeStartedStanding === null) {
+            platform.timeStartedStanding = Date.now();
+        } else if (Date.now() - platform.timeStartedStanding > platformTimeout) {
+            platform.shouldFall = true;
+        }
+
+        platform.timeLeftStanding = null;
+        } else {
+        if (platform.timeStartedStanding !== null && platform.timeLeftStanding === null) {
+            platform.timeLeftStanding = Date.now();
+        }
+        platform.timeStartedStanding = null;
+
+        if (platform.playerWasOn && platform.timeLeftStanding !== null && Date.now() - platform.timeLeftStanding > platformDecayDelay) {
+            platform.shouldFall = true;
+        }
+        }
+
+        if (platform.shouldFall && !platform.falling) {
+        platform.falling = true;
+        }
+
+        if (platform.falling) {
+        platform.y += 5;
+        if (platform.y > canvas.height + 100) {
+            platform.visible = false;
+            platform.falling = false;
+            platform.shouldFall = false;
+        }
+        }
     });
+
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -158,7 +216,7 @@
     ctx.fillStyle = 'black';
     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
     if (platform.index % 10 === 0) {
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = 'black';
         ctx.font = '12px Arial';
         ctx.fillText(platform.index.toString(), platform.x + 5, platform.y - 5);
     }
@@ -166,7 +224,7 @@
 
     // Draw score
     ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
+    ctx.font = '20px "Mystery Quest", cursive';
     ctx.fillText('Score: ' + score.toString().padStart(Math.max(4, score.toString().length), '0'), 10, 30);
 
     requestAnimationFrame(updateGame);
