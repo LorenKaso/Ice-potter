@@ -40,7 +40,7 @@ function createPlatform(y) {
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
 
     let enemy = null;
-    if (Math.random() < 0.05) { // 5% סיכוי
+    if (Math.random() < 0.05) { // 5% 
         const enemyType = Math.random() < 0.5 ? 'Type1' : 'Type2';
         enemy = {
             type: enemyType,
@@ -172,7 +172,10 @@ function updateGame() {
     player.velY += gravity;
     player.x += player.velX;
     player.y += player.velY;
-    if (player.y > canvas.height) return triggerGameOver();
+    if (player.y+player.height >= canvas.height){
+        triggerGameOver();
+    }
+    
 
     // Screen scroll
     if (player.y < canvas.height / 4) {
@@ -211,58 +214,52 @@ function updateGame() {
         player.velY >= 0;
 
         if (isOnPlatform) {
-            player.jumping = false;
-            player.velY = 0;
-            player.y = platform.y - player.height;
-            standingOn = platform.index;
-            platform.playerWasOn = true;
+        player.jumping = false;
+        player.velY = 0;
+        player.y = platform.y - player.height;
+        standingOn = platform.index;
+        platform.playerWasOn = true;
 
-            if (platform.index > highestPlatformReached) {
-                const jumpDistance = platform.index - highestPlatformReached;
-                if (jumpDistance >= 1) {
-                    score += jumpDistance * 10;
-                    if (jumpDistance > 2) {
-                        score += 50;
-                    }
-                }
-                highestPlatformReached = platform.index;
-            }
-
-            if (platform.index !== 0) {
-                if (platform.timeStartedStanding === null) {
-                    platform.timeStartedStanding = Date.now();
-                } else if (Date.now() - platform.timeStartedStanding > platformTimeout) {
-                    platform.shouldFall = true;
+        if (platform.index > highestPlatformReached) {
+            const jumpDistance = platform.index - highestPlatformReached;
+            if (jumpDistance >= 1) {
+                score += jumpDistance * 10;
+                if (jumpDistance > 2) {
+                    score += 50;
                 }
             }
+            highestPlatformReached = platform.index;
+        }
 
-            platform.timeLeftStanding = null;
+        if (platform.timeStartedStanding === null) {
+            platform.timeStartedStanding = Date.now();
+        } else if (Date.now() - platform.timeStartedStanding > platformTimeout) {
+            platform.shouldFall = true;
+        }
+
+        platform.timeLeftStanding = null;
         } else {
-            if (platform.timeStartedStanding !== null && platform.timeLeftStanding === null) {
-                platform.timeLeftStanding = Date.now();
-            }
-            platform.timeStartedStanding = null;
+        if (platform.timeStartedStanding !== null && platform.timeLeftStanding === null) {
+            platform.timeLeftStanding = Date.now();
+        }
+        platform.timeStartedStanding = null;
 
-            if (platform.index !== 0 &&
-                platform.playerWasOn &&
-                platform.timeLeftStanding !== null &&
-                Date.now() - platform.timeLeftStanding > platformDecayDelay) {
-                platform.shouldFall = true;
-            }
-            
+        if (platform.playerWasOn && platform.timeLeftStanding !== null && Date.now() - platform.timeLeftStanding > platformDecayDelay) {
+            platform.shouldFall = true;
+        }
+        }
 
-            if (platform.shouldFall && !platform.falling) {
-                platform.falling = true;
-            }
+        if (platform.shouldFall && !platform.falling) {
+        platform.falling = true;
+        }
 
-            if (platform.falling) {
-                platform.y += 5;
-                if (platform.y > canvas.height + 100) {
-                    platform.visible = false;
-                    platform.falling = false;
-                    platform.shouldFall = false;
-                }
-            }
+        if (platform.falling) {
+        platform.y += 5;
+        if (platform.y > canvas.height + 100) {
+            platform.visible = false;
+            platform.falling = false;
+            platform.shouldFall = false;
+        }
         }
     });
 
