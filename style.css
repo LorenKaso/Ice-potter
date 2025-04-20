@@ -1,0 +1,52 @@
+body {
+    font-family: 'Harry P', cursive;
+    background: linear-gradient(to bottom, 
+      #cceeff 0%,       /* תכלת שמיים בהירים למעלה */
+      #ffcc99 20%,      /* שקיעה כתומה */
+      #a0522d 40%,      /* חום עמוק */
+      #2e1a0f 60%,      /* חום כהה */
+      #000000 150%      /* לילה שחור בתחתית */
+    );
+      margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  #gameCanvas {
+    display: block;
+    margin: auto;
+    background-color: #87CEEB;
+  }
+  
+  /* טבלת הניקוד */
+  .score-board {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 15px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    font-size: 22px;
+    font-family: 'Harry P', cursive;
+    color: #111;
+  }
+  
+  /* כפתור שחק שוב */
+  #play-again-btn {
+    position: absolute;
+    top: 500px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Harry P', cursive;
+    font-size: 20px;
+    background-color: #222;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  

@@ -1,6 +1,19 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Load Harry Potter image
+const harryImg = new Image();
+harryImg.src = 'images/player-harry.png';
+
+// Load background image
+const backgroundImg = new Image();
+backgroundImg.src = 'images/background-hogwarts.jpeg';
+
+// Load broom image
+const broomImg = new Image();
+broomImg.src = 'images/broom.png';
+
+
 // Game settings
 const gravity = 0.5;
 const friction = 0.8;
@@ -20,8 +33,8 @@ let gameOverScale = 0; // animation size
 let player = {
     x: canvas.width / 2,
     y: canvas.height - 150,
-    width: 20,
-    height: 20,
+    width: 45,
+    height: 40,
     speed: 5,
     velX: 0,
     velY: 0,
@@ -293,18 +306,37 @@ function updateGame() {
 
 
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //draw canvas
+    ctx.save(); // שומר את ההגדרות הקודמות
+    ctx.globalAlpha = 0.4; // שקיפות – בין 0 (שקוף) ל־1 (אטום)
+    ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    ctx.restore(); // מחזיר את ההגדרות לקדמותן
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#f5deb3'; // צבע בהיר מאוד (Wheat / שמנת)
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
 
     // Draw player
-    ctx.fillStyle = 'red';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    if (harryImg.complete) {
+        ctx.drawImage(harryImg, player.x, player.y, player.width, player.height);
+    } else {
+        // fallback בזמן טעינה
+        ctx.fillStyle = 'red';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
 
     // Draw platforms with index
     platforms.sort((a, b) => a.y - b.y);
     platforms.forEach(platform => {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+    if (broomImg.complete) {
+        ctx.drawImage(broomImg, platform.x - 15, platform.y - 60, platform.width , 120);
+    } else {
+        // fallback 
+        ctx.fillStyle = 'brown';
+        ctx.fillRect(platform.x, platform.y, platform.width, 10);
+    }
+        
     if (platform.index % 10 === 0) {
         ctx.fillStyle = 'black';
         ctx.font = '16px "Mystery Quest", cursive';
@@ -333,7 +365,7 @@ function updateGame() {
     if (GameOver) {
         ctx.save();
         gameOverScale += 0.05;
-        const fontSize = Math.min(120, gameOverScale * 1200); // גודל עד מקסימום 60
+        const fontSize = Math.min(120, gameOverScale * 1200); //   
     
         ctx.font = `${fontSize}px 'Mystery Quest', cursive`;
         ctx.fillStyle = 'black';
