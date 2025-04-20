@@ -13,6 +13,11 @@ backgroundImg.src = 'images/background-hogwarts.jpeg';
 const broomImg = new Image();
 broomImg.src = 'images/broom.png';
 
+//// Load enemy image
+const ballImg = new Image();
+ballImg.src = 'images/enemy1.png';
+const dementorImg = new Image();
+dementorImg.src = 'images/enemy2.png';
 
 // Game settings
 const gravity = 0.5;
@@ -53,15 +58,15 @@ function createPlatform(y) {
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
 
     let enemy = null;
-    if (Math.random() < 0.05) { // 5% 
-        const enemyType = Math.random() < 0.5 ? 'Type1' : 'Type2';
+    if (Math.random() < 0.05) { // 5%   
+        const enemyType = Math.random() < 0.5 ? 'enemy1' : 'enemy2';
         enemy = {
             type: enemyType,
-            width: 20,
-            height: 20,
-            x: x + (enemyType === 'Type1' ? (width / 2 - 10) : 0),
-            y: y - 20,
-            direction: (enemyType === 'Type2' ? 1 : 0)// only for Tyoe2
+            width: enemyType === 'enemy2' ? 40 : 40,
+            height: enemyType === 'enemy2' ? 60 : 50,
+            x: x + 20,
+            y: y - (enemyType === 'enemy2' ? 60 : 30),
+            direction: (enemyType === 'enemy2' ? 1 : 0)
         };
     }
 
@@ -281,10 +286,21 @@ function updateGame() {
         }
     });
 
-    // 🟡 Update moving enemies (Type2)
+     //draw canvas
+     ctx.save();     
+     ctx.globalAlpha = 0.4; 
+     ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+     ctx.restore(); 
+     ctx.save();
+     ctx.globalAlpha = 0.15;
+     ctx.fillStyle = '#f5deb3'; 
+     ctx.fillRect(0, 0, canvas.width, canvas.height);
+     ctx.restore();
+
+    // Update moving enemies (Type2)
     platforms.forEach(platform => {
         const enemy = platform.enemy;
-        if (enemy && enemy.type === 'Type2') {
+        if (enemy && enemy.type === 'enemy2') {
             // movement enemy 
             enemy.x += 1.5 * enemy.direction;
 
@@ -293,6 +309,19 @@ function updateGame() {
                 enemy.direction *= -1;
             }
         }
+
+        //paint enemy
+        if (enemy && platform.visible) {
+            ctx.save(); // שמירת מצב הקנבס
+            ctx.globalAlpha = 1;
+            if (enemy.type === 'enemy2' && dementorImg.complete) {
+                ctx.drawImage(dementorImg, enemy.x, enemy.y, enemy.width, enemy.height);
+            } else if (enemy.type === 'enemy1' && ballImg.complete) {
+                ctx.drawImage(ballImg, enemy.x, enemy.y - 10, enemy.width, enemy.height);
+            }
+            ctx.restore();
+        }
+        //פגיעה בשחקן
         if (
             enemy && platform.visible &&
             player.x < enemy.x + enemy.width &&
@@ -303,19 +332,6 @@ function updateGame() {
             return triggerGameOver();
         }
     });
-
-
-
-    //draw canvas
-    ctx.save(); // שומר את ההגדרות הקודמות
-    ctx.globalAlpha = 0.4; // שקיפות – בין 0 (שקוף) ל־1 (אטום)
-    ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-    ctx.restore(); // מחזיר את ההגדרות לקדמותן
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#f5deb3'; // צבע בהיר מאוד (Wheat / שמנת)
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
 
     // Draw player
     if (harryImg.complete) {
@@ -352,15 +368,6 @@ function updateGame() {
     ctx.fillStyle = 'black';
     ctx.font = '20px "Mystery Quest", cursive';
     ctx.fillText('Score: ' + score.toString().padStart(Math.max(4, score.toString().length), '0'), 10, 30);
-    
-    //  Draw enemies
-    platforms.forEach(platform => {
-    const enemy = platform.enemy;
-        if (enemy && platform.visible) {
-            ctx.fillStyle = enemy.type === 'Type1' ? 'purple' : 'orange';
-            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-        }
-    });
 
     if (GameOver) {
         ctx.save();
