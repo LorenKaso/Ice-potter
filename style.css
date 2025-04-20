@@ -1,11 +1,11 @@
 body {
     font-family: 'Harry P', cursive;
     background: linear-gradient(to bottom, 
-      #cceeff 0%,       /* תכלת שמיים בהירים למעלה */
-      #ffcc99 20%,      /* שקיעה כתומה */
-      #a0522d 40%,      /* חום עמוק */
-      #2e1a0f 60%,      /* חום כהה */
-      #000000 150%      /* לילה שחור בתחתית */
+      #cceeff 0%,       
+      #ffcc99 20%,      
+      #a0522d 40%,      
+      #2e1a0f 60%,      
+      #000000 150%      
     );
       margin: 0;
     padding: 0;
@@ -18,7 +18,6 @@ body {
     background-color: #87CEEB;
   }
   
-  /* טבלת הניקוד */
   .score-board {
     position: absolute;
     top: 100px;
@@ -34,7 +33,6 @@ body {
     color: #111;
   }
   
-  /* כפתור שחק שוב */
   #play-again-btn {
     position: absolute;
     top: 500px;
@@ -49,4 +47,18 @@ body {
     border-radius: 10px;
     cursor: pointer;
   }
+
+  #muteBtn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    z-index: 999;
+  }
+  
   

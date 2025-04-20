@@ -19,6 +19,34 @@ ballImg.src = 'images/enemy1.png';
 const dementorImg = new Image();
 dementorImg.src = 'images/enemy2.png';
 
+//// Load star image
+const starImg = new Image();
+starImg.src = 'images/snitch.png'; 
+
+//// Load spring image
+const teleportImg = new Image();
+teleportImg.src = 'images/spring1.png';
+
+//sound/background
+const backgroundMusic = new Audio('sounds/Harry Potter Music.mp3');
+backgroundMusic.loop = true; 
+backgroundMusic.volume = 0.5;
+
+//sound/mute
+const muteBtn = document.getElementById("muteBtn");
+muteBtn.addEventListener("click", () => {
+    if (backgroundMusic.muted) {
+        backgroundMusic.muted = false;
+        muteBtn.textContent = "🔊 השתק";
+    } else {
+        backgroundMusic.muted = true;
+        muteBtn.textContent = "🔇 הפעל";
+    }
+});
+
+//sound/teleport
+const teleportSound = new Audio('sounds/teleport.mp3');
+
 // Game settings
 const gravity = 0.5;
 const friction = 0.8;
@@ -33,6 +61,10 @@ let highestPlatformReached = 0;
 let highScore = JSON.parse(localStorage.getItem('highScore'))
 let GameOver = false;
 let gameOverScale = 0; // animation size
+
+//star
+let isInvincible = false;
+let invincibleStartTime = null;
 
 // Player
 let player = {
@@ -56,9 +88,15 @@ let currentIndex = 0;
 function createPlatform(y) {
     let width = currentIndex % 100 === 0 ? canvas.width : 100;
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
+    //platform move up and down 
     let isMoving = Math.random() < 0.06; // 6% מהפלטפורמות
     let moveDirection = 1; // 1=למעלה, -1=למטה
     let moveSpeed = 0.5 + Math.random();
+    //add star 
+    let hasStar = Math.random() < 0.06; // 6% מהפלטפורמות יקבלו כוכב
+    //add spring
+    let isTeleportPad = Math.random() < 0.03; // 3% מהפלטפורמות
+
     let enemy = null;
     if (Math.random() < 0.05) { // 5%   
         const enemyType = Math.random() < 0.5 ? 'enemy1' : 'enemy2';
@@ -88,7 +126,9 @@ function createPlatform(y) {
         moving: isMoving,
         direction: moveDirection,
         speed: moveSpeed,
-        originalY: y
+        originalY: y,
+        star: hasStar,
+        teleport: isTeleportPad
     };
 }
 
@@ -203,6 +243,10 @@ function updateGame() {
     
     if (GameOver) return;
 
+    if (backgroundMusic.paused) {
+        backgroundMusic.play().catch(e => console.log("User interaction required to start music"));
+    }
+    
     if (keys[39]) {
         if (player.velX < player.speed) {
             player.velX++;
@@ -276,8 +320,10 @@ platforms.forEach(platform => {
         player.velY = 0;
     }
 
-
-
+    if (isInvincible && Date.now() - invincibleStartTime > 7000) {
+        isInvincible = false;
+    }
+    
     let standingOn = null;
 
     platforms.forEach(platform => {
@@ -296,6 +342,33 @@ platforms.forEach(platform => {
         player.y = platform.y - player.height;
         standingOn = platform.index;
         platform.playerWasOn = true;
+
+        //  אם יש כוכב על הפלטפורמה והשחקן נוגע בו
+        if (platform.star) {
+            const touchingStar =
+                player.x < platform.x + platform.width &&
+                player.x + player.width > platform.x &&
+                player.y < platform.y &&
+                player.y + player.height > platform.y - 30;
+
+            if (touchingStar) {
+                isInvincible = true;
+                invincibleStartTime = Date.now();
+                platform.star = false;
+            }
+        }
+        //spring
+        if (platform.teleport) {
+            teleportSound.play();
+            let targetIndex = platform.index + 5; // נניח שקופץ 3 פלטפורמות קדימה
+            let targetPlatform = platforms.find(p => p.index === targetIndex && p.visible);
+            if (targetPlatform) {
+                player.x = targetPlatform.x + targetPlatform.width / 2 - player.width / 2;
+                player.y = targetPlatform.y - player.height;
+                player.velY = 0;
+            }
+            platform.teleport = false; // שימוש חד־פעמי
+        }
 
         if (platform.index > highestPlatformReached) {
             const jumpDistance = platform.index - highestPlatformReached;
@@ -341,20 +414,10 @@ platforms.forEach(platform => {
     });
 
     drawGameBackground();
-     /*draw canvas
-        ctx.save();     
-        ctx.globalAlpha = 0.4; 
-        ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-        ctx.restore(); 
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = '#f5deb3'; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();*/
-     
-    // Update moving enemies (Type2)
+  
     platforms.forEach(platform => {
         const enemy = platform.enemy;
+    
         if (enemy && enemy.type === 'enemy2') {
             // movement enemy 
             enemy.x += 1.5 * enemy.direction;
@@ -376,21 +439,33 @@ platforms.forEach(platform => {
             }
             ctx.restore();
         }
-        //פגיעה בשחקן
-        if (
-            enemy && platform.visible &&
-            player.x < enemy.x + enemy.width &&
-            player.x + player.width > enemy.x &&
-            player.y < enemy.y + enemy.height &&
-            player.y + player.height > enemy.y
-        ) {
-            return triggerGameOver();
+        // פגיעה בשחקן
+        if (enemy && platform.visible) {
+            // התאמת מיקום ה־Y של האויב לפי סוג
+            const enemyY = enemy.type === 'enemy1' ? enemy.y - 10 : enemy.y;
+        
+            const isCollision =
+                player.x < enemy.x + enemy.width &&
+                player.x + player.width > enemy.x &&
+                player.y < enemyY + enemy.height &&
+                player.y + player.height > enemyY;
+        
+            if (isCollision && !isInvincible) {
+                return triggerGameOver();
+            }
         }
+         
     });
 
     // Draw player
     if (harryImg.complete) {
+        ctx.save();
+        if (isInvincible) {
+            ctx.globalAlpha = 0.4; // דהוי – כאילו עם גלימת היעלמות
+        }
         ctx.drawImage(harryImg, player.x, player.y, player.width, player.height);
+        ctx.restore();
+
     } else {
         // fallback בזמן טעינה
         ctx.fillStyle = 'red';
@@ -407,7 +482,16 @@ platforms.forEach(platform => {
         ctx.fillStyle = 'brown';
         ctx.fillRect(platform.x, platform.y, platform.width, 10);
     }
-        
+
+    // Draw star
+    if (platform.star && starImg.complete) {
+        ctx.drawImage(starImg, platform.x + platform.width / 2 - 15, platform.y - 35, 40, 40);
+    }    
+    // Draw spring
+    if (platform.teleport && teleportImg.complete) {
+        ctx.drawImage(teleportImg, platform.x + platform.width / 2 - 20, platform.y - 40, 40, 40);
+    }
+            
     if (platform.index % 10 === 0) {
         ctx.fillStyle = 'black';
         ctx.font = '16px "Mystery Quest", cursive';
