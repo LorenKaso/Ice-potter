@@ -12,6 +12,9 @@ const platformDecayDelay = 5000;
 // Score
 let score = 0;
 let highestPlatformReached = 0;
+let highScore = JSON.parse(localStorage.getItem('highScore'))
+let GameOver = false;
+let gameOverScale = 0; // animation size
 
 // Player
 let player = {
@@ -31,26 +34,9 @@ let player = {
 let platforms = [];
 let currentIndex = 0;
 
-// First platform: index 0, full width at bottom
-platforms.push({
-    x: 0,
-    y: canvas.height - 50,
-    width: canvas.width,
-    height: 10,
-    index: currentIndex++,
-    visible: true, //platform gone or not
-    timeStartedStanding: null,
-    timeLeftStanding: null,    
-    playerWasOn: false,
-    falling: false,
-    shouldFall: false,
-    enemy: null
-});
-
-let lastY = canvas.height - 50;
 
 function createPlatform(y) {
-    let width = currentIndex % 10 === 0 ? canvas.width : 100;
+    let width = currentIndex % 100 === 0 ? canvas.width : 100;
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
 
     let enemy = null;
@@ -82,14 +68,34 @@ function createPlatform(y) {
     };
 }
 
-// First platform
-platforms.push(createPlatform(lastY));
+//start platform(index 0)
+const bottomPlatform = {
+    x: 0,
+    y: canvas.height - 40,
+    width: canvas.width,
+    height: 10,
+    index: currentIndex++,
+    visible: true,
+    timeStartedStanding: null,
+    timeLeftStanding: null,
+    playerWasOn: false,
+    falling: false,
+    shouldFall: false,
+    enemy: null
+};
+
+platforms.push(bottomPlatform);
+
+let lastY = bottomPlatform.y - 100;
+platforms.push(createPlatform(lastY)); // index = 1
+
 
 // Add a few to start
-for (let i = 0; i < 9; i++) {
+for (let i = 0; i < 8; i++) {
     lastY -= platformSpacing + Math.floor(Math.random() * 50);
     platforms.push(createPlatform(lastY));
 }
+
 
 
 // Key Listener
@@ -116,8 +122,41 @@ function maybeAddPlatforms() {
     }
 }
 
+function triggerGameOver() {
+    GameOver = true;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.font = '40px Arial';
+    
+    // save scores
+    let storedScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+    storedScores.push(score);
+    storedScores.sort((a, b) => b - a);
+    storedScores = storedScores.slice(0, 10);
+    localStorage.setItem('highScores', JSON.stringify(storedScores));
+
+    //  table Top Scores
+    ctx.font = '24px Arial';
+    ctx.fillText('Top Scores:', canvas.width / 2 - 80, canvas.height / 2 - 20);
+    storedScores.forEach((s, i) => {
+        ctx.fillText(`${i + 1}. ${s}`, canvas.width / 2 - 30, canvas.height / 2 + i * 20);
+    });
+
+    // button Play Again
+    const btn = document.createElement('button');
+    btn.textContent = 'Play Again';
+    btn.style.position = 'absolute';
+    btn.style.top = (canvas.offsetTop + canvas.height / 2 + 200) + 'px';
+    btn.style.left = (canvas.offsetLeft + canvas.width / 2 - 50) + 'px';
+    btn.onclick = () => location.reload();
+    document.body.appendChild(btn);
+}
+
+
 function updateGame() {
     
+    if (GameOver) return;
+
     if (keys[39]) {
         if (player.velX < player.speed) {
             player.velX++;
@@ -133,6 +172,7 @@ function updateGame() {
     player.velY += gravity;
     player.x += player.velX;
     player.y += player.velY;
+    if (player.y > canvas.height) return triggerGameOver();
 
     // Screen scroll
     if (player.y < canvas.height / 4) {
@@ -171,52 +211,58 @@ function updateGame() {
         player.velY >= 0;
 
         if (isOnPlatform) {
-        player.jumping = false;
-        player.velY = 0;
-        player.y = platform.y - player.height;
-        standingOn = platform.index;
-        platform.playerWasOn = true;
+            player.jumping = false;
+            player.velY = 0;
+            player.y = platform.y - player.height;
+            standingOn = platform.index;
+            platform.playerWasOn = true;
 
-        if (platform.index > highestPlatformReached) {
-            const jumpDistance = platform.index - highestPlatformReached;
-            if (jumpDistance >= 1) {
-            score += jumpDistance * 10;
-            if (jumpDistance > 2) {
-                score += 50;
+            if (platform.index > highestPlatformReached) {
+                const jumpDistance = platform.index - highestPlatformReached;
+                if (jumpDistance >= 1) {
+                    score += jumpDistance * 10;
+                    if (jumpDistance > 2) {
+                        score += 50;
+                    }
+                }
+                highestPlatformReached = platform.index;
             }
+
+            if (platform.index !== 0) {
+                if (platform.timeStartedStanding === null) {
+                    platform.timeStartedStanding = Date.now();
+                } else if (Date.now() - platform.timeStartedStanding > platformTimeout) {
+                    platform.shouldFall = true;
+                }
             }
-            highestPlatformReached = platform.index;
-        }
 
-        if (platform.timeStartedStanding === null) {
-            platform.timeStartedStanding = Date.now();
-        } else if (Date.now() - platform.timeStartedStanding > platformTimeout) {
-            platform.shouldFall = true;
-        }
-
-        platform.timeLeftStanding = null;
+            platform.timeLeftStanding = null;
         } else {
-        if (platform.timeStartedStanding !== null && platform.timeLeftStanding === null) {
-            platform.timeLeftStanding = Date.now();
-        }
-        platform.timeStartedStanding = null;
+            if (platform.timeStartedStanding !== null && platform.timeLeftStanding === null) {
+                platform.timeLeftStanding = Date.now();
+            }
+            platform.timeStartedStanding = null;
 
-        if (platform.playerWasOn && platform.timeLeftStanding !== null && Date.now() - platform.timeLeftStanding > platformDecayDelay) {
-            platform.shouldFall = true;
-        }
-        }
+            if (platform.index !== 0 &&
+                platform.playerWasOn &&
+                platform.timeLeftStanding !== null &&
+                Date.now() - platform.timeLeftStanding > platformDecayDelay) {
+                platform.shouldFall = true;
+            }
+            
 
-        if (platform.shouldFall && !platform.falling) {
-        platform.falling = true;
-        }
+            if (platform.shouldFall && !platform.falling) {
+                platform.falling = true;
+            }
 
-        if (platform.falling) {
-        platform.y += 5;
-        if (platform.y > canvas.height + 100) {
-            platform.visible = false;
-            platform.falling = false;
-            platform.shouldFall = false;
-        }
+            if (platform.falling) {
+                platform.y += 5;
+                if (platform.y > canvas.height + 100) {
+                    platform.visible = false;
+                    platform.falling = false;
+                    platform.shouldFall = false;
+                }
+            }
         }
     });
 
@@ -231,6 +277,15 @@ function updateGame() {
             if (enemy.x <= platform.x || enemy.x + enemy.width >= platform.x + platform.width) {
                 enemy.direction *= -1;
             }
+        }
+        if (
+            enemy && platform.visible &&
+            player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y
+        ) {
+            return triggerGameOver();
         }
     });
 
@@ -273,6 +328,19 @@ function updateGame() {
         }
     });
 
+    if (GameOver) {
+        ctx.save();
+        gameOverScale += 0.05;
+        const fontSize = Math.min(120, gameOverScale * 1200); // גודל עד מקסימום 60
+    
+        ctx.font = `${fontSize}px 'Mystery Quest', cursive`;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+        return; // stpo movment in game
+    }
+    
     requestAnimationFrame(updateGame);
     }
 
