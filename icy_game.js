@@ -56,7 +56,9 @@ let currentIndex = 0;
 function createPlatform(y) {
     let width = currentIndex % 100 === 0 ? canvas.width : 100;
     let x = width === canvas.width ? 0 : Math.random() * (canvas.width - width);
-
+    let isMoving = Math.random() < 0.06; // 6% מהפלטפורמות
+    let moveDirection = 1; // 1=למעלה, -1=למטה
+    let moveSpeed = 0.5 + Math.random();
     let enemy = null;
     if (Math.random() < 0.05) { // 5%   
         const enemyType = Math.random() < 0.5 ? 'enemy1' : 'enemy2';
@@ -82,7 +84,11 @@ function createPlatform(y) {
         playerWasOn: false,
         falling: false,
         shouldFall: false,
-        enemy: enemy
+        enemy: enemy,
+        moving: isMoving,
+        direction: moveDirection,
+        speed: moveSpeed,
+        originalY: y
     };
 }
 
@@ -114,6 +120,21 @@ for (let i = 0; i < 8; i++) {
     platforms.push(createPlatform(lastY));
 }
 
+//background canvas
+function drawGameBackground() {
+    ctx.save();     
+    ctx.globalAlpha = 0.4; 
+    ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    ctx.restore(); 
+    
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#f5deb3'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+
+
 
 
 // Key Listener
@@ -142,8 +163,10 @@ function maybeAddPlatforms() {
 
 function triggerGameOver() {
     GameOver = true;
-    //clear screen
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    /*clear screen
+    ctx.clearRect(0, 0, canvas.width, canvas.height);*/
+    drawGameBackground();
+
     
     //show only game over
     ctx.fillStyle = 'black';
@@ -212,6 +235,35 @@ function updateGame() {
         });
         maybeAddPlatforms(); 
     }
+
+    // Screen scroll
+if (player.y < canvas.height / 4) {
+    const scroll = Math.abs(player.velY);
+    player.y += scroll;
+    platforms.forEach(platform => {
+        platform.y += scroll;
+        if (platform.enemy) {
+            platform.enemy.y += scroll;
+        }
+    });
+    maybeAddPlatforms(); 
+}
+
+//movment platform
+platforms.forEach(platform => {
+    if (platform.moving && platform.visible) {
+        platform.y += platform.direction * platform.speed;
+
+        if (Math.abs(platform.y - platform.originalY) > 30) {
+            platform.direction *= -1;
+        }
+
+        if (platform.enemy) {
+            platform.enemy.y += platform.direction * platform.speed;
+        }
+    }
+});
+
     if (player.x >= canvas.width - player.width) {
         player.x = canvas.width - player.width;
     } else if (player.x <= 0) {
@@ -223,6 +275,8 @@ function updateGame() {
         player.jumping = false;
         player.velY = 0;
     }
+
+
 
     let standingOn = null;
 
@@ -286,17 +340,18 @@ function updateGame() {
         }
     });
 
-     //draw canvas
-     ctx.save();     
-     ctx.globalAlpha = 0.4; 
-     ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-     ctx.restore(); 
-     ctx.save();
-     ctx.globalAlpha = 0.15;
-     ctx.fillStyle = '#f5deb3'; 
-     ctx.fillRect(0, 0, canvas.width, canvas.height);
-     ctx.restore();
-
+    drawGameBackground();
+     /*draw canvas
+        ctx.save();     
+        ctx.globalAlpha = 0.4; 
+        ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+        ctx.restore(); 
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#f5deb3'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();*/
+     
     // Update moving enemies (Type2)
     platforms.forEach(platform => {
         const enemy = platform.enemy;
@@ -379,7 +434,7 @@ function updateGame() {
         ctx.textAlign = 'center';
         ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
         ctx.restore();
-        return; // stpo movment in game
+        return; // stop movment in game
     }
     
     requestAnimationFrame(updateGame);
