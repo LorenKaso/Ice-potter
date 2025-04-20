@@ -124,32 +124,37 @@ function maybeAddPlatforms() {
 
 function triggerGameOver() {
     GameOver = true;
+    //clear screen
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    //show only game over
     ctx.fillStyle = 'black';
     ctx.font = '40px Arial';
-    
-    // save scores
-    let storedScores = JSON.parse(localStorage.getItem('highScores') || '[]');
-    storedScores.push(score);
-    storedScores.sort((a, b) => b - a);
-    storedScores = storedScores.slice(0, 10);
-    localStorage.setItem('highScores', JSON.stringify(storedScores));
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
 
-    //  table Top Scores
-    ctx.font = '24px Arial';
-    ctx.fillText('Top Scores:', canvas.width / 2 - 80, canvas.height / 2 - 20);
-    storedScores.forEach((s, i) => {
-        ctx.fillText(`${i + 1}. ${s}`, canvas.width / 2 - 30, canvas.height / 2 + i * 20);
-    });
+    setTimeout(() =>{
+        // save scores
+        let storedScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+        storedScores.push(score);
+        storedScores.sort((a, b) => b - a);
+        storedScores = storedScores.slice(0, 10);
+        localStorage.setItem('highScores', JSON.stringify(storedScores));
 
-    // button Play Again
-    const btn = document.createElement('button');
-    btn.textContent = 'Play Again';
-    btn.style.position = 'absolute';
-    btn.style.top = (canvas.offsetTop + canvas.height / 2 + 200) + 'px';
-    btn.style.left = (canvas.offsetLeft + canvas.width / 2 - 50) + 'px';
-    btn.onclick = () => location.reload();
-    document.body.appendChild(btn);
+        //  table Top Scores
+        const scoreBoard = document.createElement('div');
+        scoreBoard.className = 'score-board';
+        scoreBoard.innerHTML = '<h2>Top Scores</h2>' +
+        storedScores.map((s, i) => `<div>${i + 1}. ${s}</div>`).join('');
+        document.body.appendChild(scoreBoard);
+
+        // button Play Again
+        const btn = document.createElement('button');
+        btn.id = 'play-again-btn';
+        btn.textContent = 'Play Again';
+        btn.onclick = () => location.reload();
+        document.body.appendChild(btn);
+    },2000);
 }
 
 
