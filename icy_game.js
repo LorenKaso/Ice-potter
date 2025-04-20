@@ -203,40 +203,55 @@ function maybeAddPlatforms() {
 
 function triggerGameOver() {
     GameOver = true;
-    /*clear screen
-    ctx.clearRect(0, 0, canvas.width, canvas.height);*/
+
+    // רקע
     drawGameBackground();
 
-    
-    //show only game over
-    ctx.fillStyle = 'black';
-    ctx.font = '40px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+    // אפקט הגדלה
+    let scale = 0;
+    function animateGameOverText() {
+        if (scale < 1) {
+            scale += 0.05;
+            requestAnimationFrame(animateGameOverText);
+        }
 
-    setTimeout(() =>{
-        // save scores
+        drawGameBackground(); // לצייר שוב את הרקע בכל פריים
+
+        ctx.save();
+        const fontSize = Math.min(80, scale * 1000); // הגבלת גודל
+        ctx.font = `${fontSize}px 'Mystery Quest', cursive`;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+    }
+
+    animateGameOverText();
+
+    setTimeout(() => {
+        // שמירת ניקוד
         let storedScores = JSON.parse(localStorage.getItem('highScores') || '[]');
         storedScores.push(score);
         storedScores.sort((a, b) => b - a);
         storedScores = storedScores.slice(0, 10);
         localStorage.setItem('highScores', JSON.stringify(storedScores));
 
-        //  table Top Scores
+        // טבלה
         const scoreBoard = document.createElement('div');
         scoreBoard.className = 'score-board';
         scoreBoard.innerHTML = '<h2>Top Scores</h2>' +
-        storedScores.map((s, i) => `<div>${i + 1}. ${s}</div>`).join('');
+            storedScores.map((s, i) => `<div>${i + 1}. ${s}</div>`).join('');
         document.body.appendChild(scoreBoard);
 
-        // button Play Again
+        // כפתור הפעלה מחדש
         const btn = document.createElement('button');
         btn.id = 'play-again-btn';
         btn.textContent = 'Play Again';
         btn.onclick = () => location.reload();
         document.body.appendChild(btn);
-    },2000);
+    }, 2000);
 }
+
 
 
 function updateGame() {
@@ -508,7 +523,8 @@ platforms.forEach(platform => {
     ctx.font = '20px "Mystery Quest", cursive';
     ctx.fillText('Score: ' + score.toString().padStart(Math.max(4, score.toString().length), '0'), 10, 30);
 
-    if (GameOver) {
+    if (GameOver) return;
+        /*{
         ctx.save();
         gameOverScale += 0.05;
         const fontSize = Math.min(120, gameOverScale * 1200); //   
@@ -519,7 +535,7 @@ platforms.forEach(platform => {
         ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
         ctx.restore();
         return; // stop movment in game
-    }
+    }*/
     
     requestAnimationFrame(updateGame);
     }
